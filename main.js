@@ -292,6 +292,7 @@ centralize.addEventListener("click", () => {
             return;
         }
         let paths = RunDijkstra(start, end);
+        sendRunToBackend(start, end, nodes, edges);
 
 
         animationStack = animationStack.concat(paths.searching.reverse());
@@ -908,6 +909,36 @@ function initializeDv() {
         }
     })
 }
+
+async function sendRunToBackend(start, end, nodes, edges) {
+    try {
+        const resp = await fetch("http://localhost:8080/api/routing/dijkstra", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                start: start,
+                end: end,
+                nodes: nodes.map((n, idx) => ({
+                    id: idx,
+                    x: n.x,
+                    y: n.y,
+                    label: `Node ${idx}`
+                })),
+                edges: edges.map(e => ({
+                    start: e.start,
+                    end: e.end,
+                    cost: e.cost
+                }))
+            })
+        });
+        const data = await resp.json();
+        console.log("Backend dijkstra result:", data);
+        // you can highlight data.path on the canvas if you want
+    } catch (err) {
+        console.error("Failed to call backend", err);
+    }
+}
+
 
 function setup() {
     initializeDv();
