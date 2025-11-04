@@ -733,7 +733,7 @@ function RunDijkstra(start, end) {
 
 async function sendRunToBackend(start, end, nodes, edges) {
   try {
-    const resp = await fetch("http://localhost:8080/api/routing/dijkstra", {
+    const resp = await fetch("/api/routing/dijkstra", {   // <--- relative now
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -760,10 +760,9 @@ async function sendRunToBackend(start, end, nodes, edges) {
         " | total cost: " + data.totalCost;
     }
   } catch (err) {
-    console.error(err);
+    console.error("Error calling backend", err);
   }
 }
-
 
 
 function initializeDijstra(start) {
