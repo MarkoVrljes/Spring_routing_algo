@@ -753,19 +753,17 @@ async function sendRunToBackend(start, end, nodes, edges) {
       })
     });
     const data = await resp.json();
-    console.log("Backend Dijkstra result:", data);
-
-    // Optional: display backend results on UI
-    const output = document.getElementById("backendResult");
-    if (output) {
-      output.innerText =
-        `Backend Path: ${data.path.join(" -> ")} | Total Cost: ${data.totalCost}`;
+    const box = document.getElementById("backendResult");
+    if (box) {
+      box.textContent =
+        "Backend path: " + data.path.join(" -> ") +
+        " | total cost: " + data.totalCost;
     }
-
   } catch (err) {
-    console.error("Error calling backend:", err);
+    console.error(err);
   }
 }
+
 
 
 function initializeDijstra(start) {
