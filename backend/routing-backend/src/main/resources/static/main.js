@@ -115,8 +115,6 @@ const edges = [{
 ];
 
 const actions = [];
-//let processedNodes = [];
-let unprocessedNodes = [];
 const addEdgeButton = document.getElementById("addEdge");
 const clearButton = document.getElementById("clear");
 const undoButton = document.getElementById("undo");
@@ -143,13 +141,6 @@ let running = false;
 // Canvas globals
 let draggingNode = null;
 let lastAction = null;
-
-
-// Djikstra Global
-let Dijsktra = [];
-
-// Bellman-Ford Global
-let DVgraph = {};
 
 
 function getNodeIndex(x, y) {
@@ -219,7 +210,7 @@ canvas.addEventListener("mouseup", event => {
     draggingNode = null;
 });
 
-randomGraphButton.addEventListener("click", () => {
+randomGraphButton.addEventListener("click", async () => {
     lastAction = {
         type: "clear",
         data: {
@@ -237,6 +228,8 @@ randomGraphButton.addEventListener("click", () => {
     const margin = 100;
     const innerWidth = canvas.width - margin * 2;
     const innerHeight = canvas.height - margin * 2;
+    
+    // Generate nodes with minimum distance between them
     for (let i = 0; i < numNodes; i++) {
         let x, y;
         do {
@@ -256,7 +249,7 @@ randomGraphButton.addEventListener("click", () => {
         });
     }
 
-    // Max number of edges is n(n-1)/2
+    // Generate edges
     const numEdges = Math.floor(Math.random() * ((numNodes * (numNodes - 1)) / 2));
     const maxCost = 100;
     for (let i = 0; i < numEdges; i++) {
@@ -265,10 +258,32 @@ randomGraphButton.addEventListener("click", () => {
             end: Math.floor(Math.random() * numNodes),
             cost: Math.floor(Math.random() * maxCost),
             color: "gray",
-        })
+        });
     }
-    console.log(isConnected());
-    initializeDv();
+
+    // Validate the generated graph
+    try {
+        const graphRequest = {
+            nodes: nodes.map((n, idx) => ({ id: idx, x: n.x, y: n.y, label: `N${idx}` })),
+            edges: edges.map(e => ({ start: e.start, end: e.end, cost: e.cost }))
+        };
+
+        const validation = await window.api.validateGraph(graphRequest);
+        if (!validation.connected) {
+            // If not connected, add minimum edges to ensure connectivity
+            for (let i = 1; i < numNodes; i++) {
+                edges.push({
+                    start: i - 1,
+                    end: i,
+                    cost: Math.floor(Math.random() * maxCost),
+                    color: "gray"
+                });
+            }
+        }
+    } catch (err) {
+        console.error('Error validating random graph:', err);
+    }
+
     draw();
 })
 
@@ -277,67 +292,155 @@ function distanceBetweenNodes(x1, y1, x2, y2) {
 }
 
 
-centralize.addEventListener("click", () => {
-    const start = parseInt(prompt("Enter start node index:").match(/\d+/)[0]);
-    const end = parseInt(prompt("Enter end node index:").match(/\d+/)[0]);
+centralize.addEventListener("click", async () => {
+    const start = parseInt(prompt("Enter start node index:")?.match(/\d+/)?.[0]);
+    const end = parseInt(prompt("Enter end node index:")?.match(/\d+/)?.[0]);
     if (!isNaN(start) && !isNaN(end) &&
         start >= 0 && start < nodes.length &&
         end >= 0 && end < nodes.length && start != end) {
-        if (negativeEdges()) {
-            alert("Djikstra's Algorithim isn't meant for graphs with negative edges!");
-            return;
-        }
-        if (!isConnected()) {
-            alert("Please use a connected graph for Djikstra's Algorithim");
-            return;
-        }
 
-        // Local animation + visualization
-        let paths = RunDijkstra(start, end);
+        const graphRequest = {
+            startNode: start,
+            endNode: end,
+            nodes: nodes.map((n, idx) => ({ id: idx, x: n.x, y: n.y, label: `N${idx}` })),
+            edges: edges.map(e => ({ start: e.start, end: e.end, cost: e.cost })),
+        };
 
-        // Backend computation (Spring Boot)
-        sendRunToBackend(start, end, nodes, edges);
+        try {
+            // First validate the graph
+            const validation = await window.api.validateGraph(graphRequest);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
 
-        animationStack = animationStack.concat(paths.searching.reverse());
-        infoTableStacks = {
-            distanceStack: paths.distanceHistory.reverse(),
-            predecessorStack: paths.predecessorHistory.reverse()
-        }
-        infoTitle.innerHTML = "Djikstra Table (LIVE)";
-        infoParameters.innerHTML = "Start: <b>N" + start + "</b> End: <b>N" + end + "</b>";
+            if (validation.hasNegativeEdges) {
+                alert("Dijkstra's Algorithm isn't meant for graphs with negative edges!");
+                return;
+            }
 
-        toggleAnimationMode();
+            if (!validation.connected) {
+                alert("Please use a connected graph for Dijkstra's Algorithm");
+                return;
+            }
 
-        animationCallback = (ans = paths.answer) => {
-            ans.forEach(i => edges[i].color = "gold");
-            draw();
+            // Call backend Dijkstra
+            const result = await window.api.runDijkstra(graphRequest);
+            if (!result.success) {
+                alert(result.error);
+                return;
+            }
+
+            // Process simulation steps
+            if (!result.steps || result.steps.length === 0) {
+                alert('No path found');
+                return;
+            }
+
+            // Map simulation steps to animation steps
+            const animationEdges = [];
+            result.steps.forEach(step => {
+                if (step.visitedEdgeIndices) {
+                    animationEdges.push(...step.visitedEdgeIndices);
+                }
+            });
+
+            infoTableStacks = {
+                distanceStack: result.steps.map(step => Object.values(step.distances)).reverse(),
+                predecessorStack: result.steps.map(step => Object.values(step.predecessors)).reverse()
+            };
+
+            infoTitle.innerHTML = "Dijkstra Table (BACKEND)";
+            infoParameters.innerHTML = `Start: <b>N${start}</b> End: <b>N${end}</b>`;
+
+            // Prepare animation
+            animationStack = animationStack.concat(animationEdges.reverse());
+            toggleAnimationMode();
+
+            // Final callback to highlight shortest path
+            animationCallback = () => {
+                if (result.shortestPath && result.shortestPath.length > 1) {
+                    // Color the edges in the shortest path
+                    for (let i = 1; i < result.shortestPath.length; i++) {
+                        const a = result.shortestPath[i - 1];
+                        const b = result.shortestPath[i];
+                        const ei = edges.findIndex(edge => (
+                            (edge.start === a && edge.end === b) || (edge.start === b && edge.end === a)
+                        ));
+                        if (ei >= 0) edges[ei].color = "gold";
+                    }
+                    draw();
+                }
+            };
+
+        } catch (err) {
+            console.error('Error running Dijkstra:', err);
+            alert('Backend error: ' + err.message);
         }
     }
 });
 
-decentralize.addEventListener("click", () => {
-    const start = parseInt(prompt("Enter start node index:").match(/\d+/)[0]);
-    if (!isNaN(start) &&
-        start >= 0 && start < nodes.length) {
+decentralize.addEventListener("click", async () => {
+    const start = parseInt(prompt("Enter start node index:")?.match(/\d+/)?.[0]);
+    const end = parseInt(prompt("Enter end node index:")?.match(/\d+/)?.[0]);
+    
+    if (!isNaN(start) && !isNaN(end) &&
+        start >= 0 && start < nodes.length &&
+        end >= 0 && end < nodes.length) {
 
-        let info = DvAlgorithm(start);
-        animationStack = animationStack.concat(info.searching.reverse());
-        infoTableStacks = {
-            distanceStack: info.distanceHistory.reverse(),
-            predecessorStack: info.predecessorHistory.reverse()
-        }
-        infoTitle.innerHTML = "Bellman-Ford Table (LIVE)";
-        infoParameters.innerHTML = "Start: <b>N" + start + "</b>";
-        toggleAnimationMode();
+        const graphRequest = {
+            startNode: start,
+            endNode: end,
+            nodes: nodes.map((n, idx) => ({ id: idx, x: n.x, y: n.y, label: `N${idx}` })),
+            edges: edges.map(e => ({ start: e.start, end: e.end, cost: e.cost }))
+        };
 
-        animationCallback = (costs = info.distances) => {
-            nodes.forEach((node, i) => {
-                context.fillStyle = "rgba(255, 255, 255, 0.7)";
-                context.fillRect(node.x - 35, node.y, 140, 50);
-                context.fillStyle = "black";
-                context.textAlign = 'center';
-                context.fillText("Cost: " + costs[i], node.x + 35, node.y + 35);
-            })
+        try {
+            // First validate the graph
+            const validation = await window.api.validateGraph(graphRequest);
+            if (!validation.valid) {
+                alert(validation.error);
+                return;
+            }
+
+            // Call backend Bellman-Ford
+            const result = await window.api.runBellmanFord(graphRequest);
+            if (!result.success) {
+                alert(result.error);
+                return;
+            }
+
+            // Process simulation steps
+            const animationEdges = [];
+            result.steps.forEach(step => {
+                if (step.visitedEdgeIndices) {
+                    animationEdges.push(...step.visitedEdgeIndices);
+                }
+            });
+
+            animationStack = animationStack.concat(animationEdges.reverse());
+            infoTableStacks = {
+                distanceStack: result.steps.map(step => Object.values(step.distances)).reverse(),
+                predecessorStack: result.steps.map(step => Object.values(step.predecessors)).reverse()
+            };
+
+            infoTitle.innerHTML = "Bellman-Ford Table (BACKEND)";
+            infoParameters.innerHTML = `Start: <b>N${start}</b> End: <b>N${end}</b>`;
+            toggleAnimationMode();
+
+            animationCallback = () => {
+                const finalDistances = result.finalDistances;
+                nodes.forEach((node, i) => {
+                    context.fillStyle = "rgba(255, 255, 255, 0.7)";
+                    context.fillRect(node.x - 35, node.y, 140, 50);
+                    context.fillStyle = "black";
+                    context.textAlign = 'center';
+                    context.fillText("Cost: " + finalDistances[i], node.x + 35, node.y + 35);
+                });
+            };
+        } catch (err) {
+            console.error('Error running Bellman-Ford:', err);
+            alert('Backend error: ' + err.message);
         }
     }
 })
@@ -454,10 +557,8 @@ exitButton.addEventListener("click", () => {
 
 
 addEdgeButton.addEventListener("click", () => {
-    const start = parseInt(prompt("Enter start node index:").match(/\d+/)[0]);
-
-    const end = parseInt(prompt("Enter end node index:").match(/\d+/)[0]);
-
+    const start = parseInt(prompt("Enter start node index:")?.match(/\d+/)?.[0]);
+    const end = parseInt(prompt("Enter end node index:")?.match(/\d+/)?.[0]);
     const cost = parseInt(prompt("Enter edge cost:"));
 
     if (!isNaN(start) && !isNaN(end) && !isNaN(cost) &&
@@ -469,8 +570,6 @@ addEdgeButton.addEventListener("click", () => {
             color: "gray",
         };
         edges.push(edge);
-        DVgraph[start][end] = cost;
-        DVgraph[end][start] = cost;
         lastAction = {
             type: "addEdge",
             data: {
@@ -506,12 +605,9 @@ undoButton.addEventListener("click", () => {
         switch (action.type) {
             case "addNode":
                 nodes.splice(action.data.index, 1);
-                delete DVgraph[action.data.index];
                 break;
             case "addEdge":
                 edges.splice(action.data.index, 1);
-                delete DVgraph[action.data.start][action.data.end];
-                delete DVgraph[action.data.end][action.data.start];
                 break;
             case "dragNode":
                 const node = nodes[action.data.index];
@@ -524,7 +620,6 @@ undoButton.addEventListener("click", () => {
                 break;
         }
         lastAction = null;
-        initializeDv();
         draw();
     }
 });
@@ -552,7 +647,6 @@ document.addEventListener("keydown", event => {
                     break;
             }
             lastAction = null;
-            initializeDv();
             draw();
         }
     }
@@ -636,170 +730,7 @@ function draw() {
     nodes.forEach(drawNode);
 }
 
-function RunDijkstra(start, end) {
-    initializeDijstra(start);
-
-    let current = start;
-
-    // For the animation/Info Table
-    let searchPath = [];
-    let distanceHistory = [];
-    let predecessorHistory = [];
-
-    distanceHistory.push(Dijsktra.reduce((acc, node, i) => {
-        acc[i] = node.distance;
-        return acc;
-    }, {}));
-
-    predecessorHistory.push(Dijsktra.reduce((acc, node, i) => {
-        acc[i] = node.PreviousVertex;
-        return acc;
-    }, {}));
-
-    console.log(distanceHistory[0]);
-
-    // iterate until no more unprocessedNodes
-    while (unprocessedNodes.length != 0) {
-        // for each edge that is connected to current node and unprocessedNode, check if that edge imrove the distance form start to the unprocessed node
-        edges.forEach(edge => {
-            if (edge.start == current && unprocessedNodes.includes(edge.end)) {
-                if (Dijsktra[edge.end].distance > Dijsktra[current].distance + edge.cost || Dijsktra[edge.end].distance == Infinity) {
-                    Dijsktra[edge.end].distance = Dijsktra[current].distance + edge.cost;
-                    Dijsktra[edge.end].PreviousVertex = current;
-
-                    // For animation/Info Table
-                    searchPath.push(edges.indexOf(edge));
-                    distanceHistory.push(Dijsktra.reduce((acc, node, i) => {
-                        acc[i] = node.distance;
-                        return acc;
-                    }, {}));
-
-                    predecessorHistory.push(Dijsktra.reduce((acc, node, i) => {
-                        acc[i] = node.PreviousVertex;
-                        return acc;
-                    }, {}));
-
-                }
-
-            } else if (edge.end == current && unprocessedNodes.includes(edge.start)) {
-                if (Dijsktra[edge.start].distance > Dijsktra[current].distance + edge.cost || Dijsktra[edge.start].distance == Infinity) {
-                    Dijsktra[edge.start].distance = Dijsktra[current].distance + edge.cost;
-                    Dijsktra[edge.start].PreviousVertex = current;
-
-                    // For animation/Info Table
-                    searchPath.push(edges.indexOf(edge));
-                    distanceHistory.push(Dijsktra.reduce((acc, node, i) => {
-                        acc[i] = node.distance;
-                        return acc;
-                    }, {}));
-
-                    predecessorHistory.push(Dijsktra.reduce((acc, node, i) => {
-                        acc[i] = node.PreviousVertex;
-                        return acc;
-                    }, {}));
-                }
-            }
-        })
-
-        //processedNodes.push(current); // put current node
-        unprocessedNodes.splice(unprocessedNodes.indexOf(current), 1); // remove current from unprocessedNodes
-        current = updateCurrent(); // update current by finding the unprocessedNodes with the lowest distance
-    }
-    let route = [];
-    let distance = Dijsktra[end].distance
-    route.push(end);
-
-    while (route[route.length - 1] != start) {
-        route.push(Dijsktra[end].PreviousVertex);
-        end = Dijsktra[end].PreviousVertex;
-        console.log(end);
-    }
-    route.reverse();
-    console.log("The shortest path is ");
-    console.log(route.join('->'));
-    console.log("And the distance is ");
-    console.log(distance);
-    console.log("ROUTE", route);
-    // Will use these for the animation.
-    // I think it's better to animate after the function than during
-    console.log("traces:", distanceHistory, predecessorHistory);
-    return {
-        distanceHistory: distanceHistory,
-        predecessorHistory: predecessorHistory,
-        searching: searchPath,
-        answer: route.reduce((acc, curr, i) => (i > 0) ? [...acc, edges.indexOf(edges.find(edge => ((edge.start === route[i - 1] && edge.end === curr && edge.cost === minCost(route[i - 1], curr)) || (edge.end === route[i - 1] && edge.start === curr && edge.cost === minCost(route[i - 1], curr)))))] : acc, []),
-    };
-}
-
-async function sendRunToBackend(start, end, nodes, edges) {
-  try {
-    const resp = await fetch("/api/routing/dijkstra", {   // <--- relative now
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        start,
-        end,
-        nodes: nodes.map((n, idx) => ({
-          id: idx,
-          x: n.x,
-          y: n.y,
-          label: `Node ${idx}`
-        })),
-        edges: edges.map(e => ({
-          start: e.start,
-          end: e.end,
-          cost: e.cost
-        }))
-      })
-    });
-    const data = await resp.json();
-    const box = document.getElementById("backendResult");
-    if (box) {
-      box.textContent =
-        "Backend path: " + data.path.join(" -> ") +
-        " | total cost: " + data.totalCost;
-    }
-  } catch (err) {
-    console.error("Error calling backend", err);
-  }
-}
-
-
-function initializeDijstra(start) {
-    // reset unprocessedNodes, processedNodes and Dijsktra in case not empty
-    unprocessedNodes = [];
-    //processedNodes = [];
-    Dijsktra = [];
-    for (let i = 0; i < nodes.length; i++) {
-        // set distance in starting node to 0
-        if (i == start) {
-            const node = {
-                distance: 0,
-                PreviousVertex: null
-            }
-            Dijsktra.push(node);
-            unprocessedNodes.push(i);
-        } else { // otherwise to infinity
-            const node = {
-                distance: Infinity,
-                PreviousVertex: null
-            }
-            Dijsktra.push(node);
-            unprocessedNodes.push(i);
-        }
-    }
-}
-
-function updateCurrent() { // helper function for runDijstra to find next current node
-    let lowest = unprocessedNodes[0];
-    for (let i = 1; i < unprocessedNodes.length; i++) {
-        if (Dijsktra[unprocessedNodes[i]].distance < Dijsktra[lowest].distance && Dijsktra[unprocessedNodes[i]].distance != Infinity) {
-            lowest = unprocessedNodes[i];
-        }
-    }
-    return lowest;
-}
-
+// Helper function to find minimum cost between two nodes (used for UI purposes)
 function minCost(n1, n2) {
     if (n1 === n2) return 0;
     min = Infinity;
@@ -808,7 +739,6 @@ function minCost(n1, n2) {
             if (edge.cost < min) min = edge.cost;
         }
     })
-
     return min;
 }
 
@@ -858,98 +788,9 @@ function negativeEdges() {
 }
 
 
-function DvAlgorithm(source) {
-    initializeDv();
-    const distances = {};
-    const predecessors = {};
-    const predecessorHistory = [];
-    const distanceHistory = [];
-
-    // initialize
-    for (const vertex in DVgraph) {
-        distances[vertex] = Infinity;
-        predecessors[vertex] = null;
-    }
-
-    predecessorHistory.push({
-        ...predecessors
-    });
-
-    // set the distance to the source to 0
-    distances[source] = 0;
-    distanceHistory.push({
-        ...distances
-    });
-    // Edge path for animation
-    searchPath = [];
-
-    // iterate over DVgraph 
-    for (let i = 0; i < Object.keys(DVgraph).length - 1; i++) {
-        for (const vertex in DVgraph) {
-            for (const neighbor in DVgraph[vertex]) {
-                const distanceThroughVertex = distances[vertex] + DVgraph[vertex][neighbor];
-                if (distanceThroughVertex < distances[neighbor]) {
-                    distances[neighbor] = distanceThroughVertex;
-                    predecessors[neighbor] = vertex;
-
-                    // For the animation/info tables
-                    predecessorHistory.push({
-                        ...predecessors
-                    });
-                    distanceHistory.push({
-                        ...distances
-                    });
-                    searchPath.push(
-                        edges.indexOf(
-                            edges.find(
-                                edge => (edge.start === parseInt(vertex) &&
-                                    edge.end === parseInt(neighbor) &&
-                                    edge.cost === minCost(parseInt(vertex), parseInt(neighbor))) ||
-                                (edge.end === parseInt(vertex) &&
-                                    edge.start === parseInt(neighbor) &&
-                                    edge.cost === minCost(parseInt(vertex), parseInt(neighbor))
-                                )
-                            )
-                        )
-                    );
-                }
-            }
-        }
-    }
-
-    return {
-        distances: distances,
-        predecessorHistory: predecessorHistory,
-        distanceHistory: distanceHistory,
-        searching: searchPath,
-    };
-}
-
-function initializeDv() {
-    DVgraph = {};
-    nodes.forEach((node, i) => DVgraph[i] = {});
-    edges.forEach((edge) => {
-
-        if (DVgraph[edge.start][edge.end]) {
-            if (edge.cost < DVgraph[edge.start][edge.end]) {
-                DVgraph[edge.start][edge.end] = edge.cost;
-            }
-        } else {
-            DVgraph[edge.start][edge.end] = edge.cost;
-        }
-        if (DVgraph[edge.end][edge.start]) {
-            if (edge.cost < DVgraph[edge.end][edge.start]) {
-                DVgraph[edge.end][edge.start] = edge.cost;
-            }
-        } else {
-            DVgraph[edge.end][edge.start] = edge.cost;
-        }
-    })
-}
+// These functions have been replaced by backend services
 
 function setup() {
-    initializeDv();
-    draw();
     draw();
 }
 
