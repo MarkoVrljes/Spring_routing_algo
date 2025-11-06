@@ -84,26 +84,7 @@ Spring_routing_algo/
 │       │   └── test/
 │       │       └── ...
 └── README.md
-
-
-### ⚙️ **Option 2 – Simpler, Clean Table Alternative**
-If you don’t need the full tree diagram, a **structured table** often looks cleaner in dark-mode READMEs and mobile views:
-
-```markdown
-## 🧱 Project Structure
-
-| Folder / File | Description |
-|----------------|-------------|
-| `backend/routing-backend/` | Main Spring Boot backend project |
-| `src/main/java/com/marko/routing_backend/controller/` | REST API endpoints |
-| `src/main/java/com/marko/routing_backend/service/` | Dijkstra + Bellman-Ford logic |
-| `src/main/java/com/marko/routing_backend/dto/` | Data Transfer Objects |
-| `src/main/resources/static/` | Frontend (HTML, JS, CSS) served by Spring Boot |
-| `index.html` | Main entry page |
-| `main.js` | Frontend logic and backend API communication |
-| `application.properties` | Spring Boot config (port, name, etc.) |
-| `README.md` | Project documentation |
-
+```
 
 ---
 
