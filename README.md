@@ -103,20 +103,28 @@ Before running, make sure you have:
 
 ### 1️⃣ Clone the repository
 
-- git clone https://github.com/MarkoVrljes/Spring_routing_algo.git
-
+```powershell
+git clone https://github.com/MarkoVrljes/Spring_routing_algo.git
+```
 ### 2️⃣ Navigate into the backend project
 
-- cd Spring_routing_algo/backend/routing-backend
+```powershell
+cd Spring_routing_algo/backend/routing-backend
+```
 
 ### 3️⃣ Clean and Run the Spring Boot application
 
-- mvn clean package
-- mvn spring-boot:run
+
+```powershell
+mvn clean package
+mvn spring-boot:run
+```
 
 ### ⏳ Wait for the console message:
 
-- Started RoutingBackendApplication on port 8080
+```powershell
+Started RoutingBackendApplication on port 8080
+```
 
 ### 4️⃣ Open in your browser
 
@@ -126,10 +134,10 @@ Before running, make sure you have:
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - H2 console: `http://localhost:8080/h2-console`
 
-3. Run tests:
+#### Optional - Run tests:
 
 ```powershell
-.\mvnw.cmd test
+mvn test
 ```
 
 If the H2 DB file is locked on startup, stop other Java processes or start Spring Boot after killing java.exe processes. The H2 DB file lives in `backend/routing-backend/data/` by default.
