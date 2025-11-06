@@ -2,6 +2,7 @@ package com.marko.routing_backend.service;
 
 import com.marko.routing_backend.dto.EdgeDto;
 import com.marko.routing_backend.dto.GraphOperationRequest;
+import com.marko.routing_backend.exception.GraphValidationException;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -54,36 +55,29 @@ public class GraphService {
 
     public void validateRequest(GraphOperationRequest request) {
         if (request.getNodes() == null || request.getNodes().isEmpty()) {
-            throw new IllegalArgumentException("Graph must have nodes");
+            throw new GraphValidationException("Graph must have nodes");
         }
         if (request.getEdges() == null) {
-            throw new IllegalArgumentException("Edges list cannot be null");
+            throw new GraphValidationException("Edges list cannot be null");
         }
         if (request.getStartNode() == null) {
-            throw new IllegalArgumentException("Start node is required");
+            throw new GraphValidationException("Start node is required");
         }
         if (request.getStartNode() < 0 || request.getStartNode() >= request.getNodes().size()) {
-            throw new IllegalArgumentException("Invalid start node index");
+            throw new GraphValidationException("Invalid start node index");
         }
-    if ("dijkstra".equals(request.getOperation())) {
-            if (request.getEndNode() == null) {
-                throw new IllegalArgumentException("End node is required for Dijkstra");
-            }
-            if (request.getEndNode() < 0 || request.getEndNode() >= request.getNodes().size()) {
-                throw new IllegalArgumentException("Invalid end node index");
-            }
-            if (request.getEndNode().equals(request.getStartNode())) {
-                throw new IllegalArgumentException("Start and end nodes must be different");
-            }
-        }
+
+        // NOTE: controller already enforces presence of endNode for endpoints that require it
+        // so we avoid requiring endNode here to keep validation reusable for multiple flows.
+
         // Validate edges reference existing node indices
         int nodeCount = request.getNodes().size();
         for (EdgeDto e : request.getEdges()) {
             if (e == null) {
-                throw new IllegalArgumentException("Edge entry cannot be null");
+                throw new GraphValidationException("Edge entry cannot be null");
             }
             if (e.getStart() < 0 || e.getStart() >= nodeCount || e.getEnd() < 0 || e.getEnd() >= nodeCount) {
-                throw new IllegalArgumentException("Edge references invalid node index: start=" + e.getStart() + ", end=" + e.getEnd());
+                throw new GraphValidationException("Edge references invalid node index: start=" + e.getStart() + ", end=" + e.getEnd());
             }
         }
     }

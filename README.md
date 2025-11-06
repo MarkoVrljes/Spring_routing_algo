@@ -1,49 +1,127 @@
-# Routing Algorithm Visualizer (Spring_routing_algo)
+# Routing Algorithm Tool (Spring Boot + JavaScript)
 
-This is an educational interactive tool designed to help students better understand routing algorithms. 
-With our tool, users can create a network and explore two distinct routing algorithms ( Centralized and Decentralized Algorithms). 
-Our user-friendly interface provides students with an improved visualization experience, allowing them to gain a deeper understanding of routing algorithm concepts.
+A full-stack **routing visualization and algorithm simulation tool** that demonstrates **Dijkstra’s** and **Bellman-Ford** algorithms powered by a **Spring Boot backend**.
 
+Originally a front-end only project, this upgraded version integrates **Java, Spring Boot REST APIs, and dynamic front-end visualization** to simulate how routing and optimization systems in financial and network environments work.
 
-This repository contains an interactive routing algorithm visualizer (Dijkstra + Bellman-Ford) with a Spring Boot backend. The backend provides REST endpoints, OpenAPI documentation, server-side validation, and an H2-backed persistence layer for scenarios.
+---
 
-## Quick overview
+## 🚀 Features
 
-- Frontend static UI: `backend/routing-backend/src/main/resources/static/` (includes `index.html`, `routing.html`, `main.js`, `styles.css`).
-- Backend: `backend/routing-backend/src/main/java/com/marko/routing_backend/` (controllers, services, DTOs, config).
-- OpenAPI/Swagger UI: `/swagger-ui.html` (interactive API docs) and `/api-docs` (OpenAPI JSON).
+### 🧠 Algorithms
+- **Dijkstra’s Algorithm** – Finds the shortest path in graphs with non-negative weights.
+- **Bellman-Ford Algorithm** – Handles graphs with negative edge weights.
 
-## Notable features (recent updates)
+### ⚙️ Architecture
+- **Frontend:** HTML, CSS, JavaScript (Canvas-based visualization)
+- **Backend:** Java + Spring Boot (REST API)
+- **Communication:** Frontend sends the graph (nodes + edges) to the backend; the backend computes and returns the optimal path.
 
-- Root `/` forwards to the `index.html` landing page.
-- Server-side validation for incoming graph payloads (node/edge index checks, negative edges handling).
-- Global exception handling returns structured JSON errors. Validation problems return HTTP 400 with a helpful message.
-- H2 embedded database is enabled (persists scenarios) and H2 console available at `/h2-console`.
-- Improved logging for unexpected errors (stacktraces are written to server logs).
+### 🌐 REST API Endpoints
+| Endpoint | Method | Description |
+|-----------|---------|-------------|
+| `/api/routing/dijkstra` | `POST` | Computes the shortest path using Dijkstra’s algorithm |
+| `/api/routing/hints` | `POST` | Returns optimization hints based on the graph (AI-style helper) |
+| `/api/scenarios` | `GET / POST` | Save and retrieve graph scenarios (in-memory for now) |
+| `/` | `GET` | Serves the main frontend UI |
 
-## REST endpoints
+---
 
-- POST `/api/graph/validate` — validate incoming graph payloads
-- POST `/api/routing/dijkstra` — run Dijkstra (returns simulation steps and final result)
-- POST `/api/routing/bellman-ford` — run Bellman-Ford
-- GET `/api/scenarios` — list saved scenarios
-- POST `/api/scenarios` — save a named scenario
+## 🧩 How It Works
 
-Error responses use a consistent JSON envelope: `{ status, error, message, field, timestamp }`.
+1. **Visualize**
+   - Create nodes and edges interactively on the canvas UI.
+   - Assign weights to each edge.
 
-## Run the application (Windows PowerShell)
+2. **Compute**
+   - Choose either **Dijkstra** or **Bellman-Ford**.
+   - The frontend sends the network graph to the backend:
+     ```json
+     {
+       "start": 0,
+       "end": 4,
+       "nodes": [...],
+       "edges": [...]
+     }
+     ```
+   - The Spring Boot backend processes the request, runs the algorithm in Java, and returns:
+     ```json
+     {
+       "path": [0, 1, 4],
+       "totalCost": 7.5
+     }
+     ```
 
-1. Build and run the backend:
+3. **Visualize the Result**
+   - The returned path is highlighted in the UI.
+   - The total cost is displayed below the canvas.
 
-```powershell
-cd C:\Users\Marko\Desktop\Projects\Spring_routing_algo\backend\routing-backend
-.\mvnw.cmd clean package
-.\mvnw.cmd spring-boot:run
-```
+---
 
-2. Open in browser:
+## 🏗️ Project Structure
+
+Spring_routing_algo/
+├── backend/
+│ └── routing-backend/
+│ ├── pom.xml
+│ ├── src/
+│ │ ├── main/
+│ │ │ ├── java/com/marko/routing_backend/
+│ │ │ │ ├── controller/      # REST endpoints
+│ │ │ │ ├── service/         # Dijkstra + Bellman-Ford logic
+│ │ │ │ ├── dto/             # Data Transfer Objects
+│ │ │ │ └── RoutingBackendApplication.java
+│ │ │ └── resources/
+│ │ │ ├── static/            # Frontend served by Spring Boot
+│ │ │ │ ├── index.html
+│ │ │ │ ├── main.js
+│ │ │ │ ├── styles.css
+│ │ │ │ ├── about.html
+│ │ │ │ ├── tutorial.html
+│ │ │ │ └── assets/
+│ │ │ └── application.properties
+│ │ └── test/
+│ │ └── ...
+└── README.md
+
+---
+
+## 🧰 Prerequisites
+
+Before running, make sure you have:
+
+| Tool | Version | Download |
+|------|----------|-----------|
+| **Java** | 17 or newer | [Download JDK](https://adoptium.net/) |
+| **Maven** | 3.9+ | [Download Maven](https://maven.apache.org/download.cgi) |
+| **Git** | Latest | [Download Git](https://git-scm.com/downloads) |
+| *(Optional)* **VS Code / IntelliJ IDEA** | — | For editing and running the project |
+
+---
+
+## 🚀 Run the Application Locally
+
+### 1️⃣ Clone the repository
+
+- git clone https://github.com/MarkoVrljes/Spring_routing_algo.git
+
+### 2️⃣ Navigate into the backend project
+
+- cd Spring_routing_algo/backend/routing-backend
+
+### 3️⃣ Clean and Run the Spring Boot application
+
+- mvn clean package
+- mvn spring-boot:run
+
+### ⏳ Wait for the console message:
+
+- Started RoutingBackendApplication on port 8080
+
+### 4️⃣ Open in your browser
 
 - Landing page: `http://localhost:8080/` (for `index.html`)
+
 - Visualizer: `http://localhost:8080/routing.html`
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - H2 console: `http://localhost:8080/h2-console`
@@ -61,8 +139,3 @@ If the H2 DB file is locked on startup, stop other Java processes or start Sprin
 - If `/api-docs` or Swagger UI fails with a 500, check the server logs for stacktraces related to OpenAPI and ensure `OpenApiConfig` is valid.
 - If `/api/routing/dijkstra` returns 500, open browser DevTools → Network and inspect the request payload (Payload tab) and response body. Validation errors should now return 400 with a message.
 - To see server-side stacktraces, watch the terminal running `mvnw.cmd spring-boot:run` — unexpected errors are logged there.
-
-## Development notes
-
-- Server-side validation was added in `GraphService.validateRequest` to ensure edges reference valid node indices and that operation strings are handled null-safely.
-- `GlobalExceptionHandler` now handles `IllegalArgumentException` and logs unexpected exceptions for easier debugging.

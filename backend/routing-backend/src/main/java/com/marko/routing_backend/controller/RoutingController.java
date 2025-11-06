@@ -27,11 +27,17 @@ public class RoutingController {
             graphService.validateRequest(request);
             boolean isConnected = graphService.isConnected(request.getEdges(), request.getNodes().size());
             boolean hasNegativeEdges = graphService.hasNegativeEdges(request.getEdges());
-            
+
             return ResponseEntity.ok(Map.of(
                 "valid", true,
                 "connected", isConnected,
                 "hasNegativeEdges", hasNegativeEdges
+            ));
+        } catch (com.marko.routing_backend.exception.GraphValidationException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "valid", false,
+                "error", e.getMessage(),
+                "field", e.getField()
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -51,6 +57,12 @@ public class RoutingController {
         try {
             request.setOperation("dijkstra");
             GraphOperationResponse response = simulationService.simulateDijkstra(request);
+            if (response == null) {
+                return ResponseEntity.status(500).body(GraphOperationResponse.error("Internal server error"));
+            }
+            if (!response.isSuccess()) {
+                return ResponseEntity.badRequest().body(response);
+            }
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(
@@ -69,6 +81,12 @@ public class RoutingController {
         try {
             request.setOperation("bellman-ford");
             GraphOperationResponse response = simulationService.simulateBellmanFord(request);
+            if (response == null) {
+                return ResponseEntity.status(500).body(GraphOperationResponse.error("Internal server error"));
+            }
+            if (!response.isSuccess()) {
+                return ResponseEntity.badRequest().body(response);
+            }
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(
