@@ -62,27 +62,28 @@ Originally a front-end only project, this upgraded version integrates **Java, Sp
 
 Spring_routing_algo/
 ├── backend/
-│ └── routing-backend/
-│ ├── pom.xml
-│ ├── src/
-│ │ ├── main/
-│ │ │ ├── java/com/marko/routing_backend/
-│ │ │ │ ├── controller/      # REST endpoints
-│ │ │ │ ├── service/         # Dijkstra + Bellman-Ford logic
-│ │ │ │ ├── dto/             # Data Transfer Objects
-│ │ │ │ └── RoutingBackendApplication.java
-│ │ │ └── resources/
-│ │ │ ├── static/            # Frontend served by Spring Boot
-│ │ │ │ ├── index.html
-│ │ │ │ ├── main.js
-│ │ │ │ ├── styles.css
-│ │ │ │ ├── about.html
-│ │ │ │ ├── tutorial.html
-│ │ │ │ └── assets/
-│ │ │ └── application.properties
-│ │ └── test/
-│ │ └── ...
+│   └── routing-backend/
+│       ├── pom.xml
+│       ├── src/
+│       │   ├── main/
+│       │   │   ├── java/com/marko/routing_backend/
+│       │   │   │   ├── controller/              # REST endpoints
+│       │   │   │   ├── service/                 # Dijkstra + Bellman-Ford logic
+│       │   │   │   ├── dto/                     # Data Transfer Objects
+│       │   │   │   └── RoutingBackendApplication.java
+│       │   │   └── resources/
+│       │   │       ├── static/                  # Frontend served by Spring Boot
+│       │   │       │   ├── index.html
+│       │   │       │   ├── main.js
+│       │   │       │   ├── styles.css
+│       │   │       │   ├── about.html
+│       │   │       │   ├── tutorial.html
+│       │   │       │   └── assets/
+│       │   │       └── application.properties
+│       │   └── test/
+│       │       └── ...
 └── README.md
+
 
 ---
 
