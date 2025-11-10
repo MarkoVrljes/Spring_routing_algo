@@ -1,8 +1,8 @@
-# Routing Algorithm Tool (Spring Boot + JavaScript)
+# Routing Algorithm Tool (Spring Boot + Modular JavaScript)
 
-A full-stack **routing visualization and algorithm simulation tool** that demonstrates **Dijkstra’s** and **Bellman-Ford** algorithms powered by a **Spring Boot backend**.
+A full-stack **routing visualization and algorithm simulation tool** for **Dijkstra’s** and **Bellman-Ford** algorithms, powered by a **Spring Boot backend** and a modular JavaScript frontend.
 
-Originally a front-end only project, this upgraded version integrates **Java, Spring Boot REST APIs, and dynamic front-end visualization** to simulate how routing and optimization systems in financial and network environments work.
+The project now features a clean separation: all algorithm computation is performed in the backend, while the frontend is responsible for UI, visualization, and user interaction. The frontend code is fully modular and no longer contains any algorithm logic.
 
 ---
 
@@ -13,16 +13,17 @@ Originally a front-end only project, this upgraded version integrates **Java, Sp
 - **Bellman-Ford Algorithm** – Handles graphs with negative edge weights.
 
 ### ⚙️ Architecture
-- **Frontend:** HTML, CSS, JavaScript (Canvas-based visualization)
-- **Backend:** Java + Spring Boot (REST API)
-- **Communication:** Frontend sends the graph (nodes + edges) to the backend; the backend computes and returns the optimal path.
+- **Frontend:** HTML, CSS, Modular JavaScript (Canvas-based visualization, UI only)
+- **Backend:** Java + Spring Boot (REST API, all algorithm logic)
+- **Communication:** Frontend sends the graph (nodes + edges) to the backend; backend computes and returns results for visualization.
 
 ### 🌐 REST API Endpoints
 | Endpoint | Method | Description |
 |-----------|---------|-------------|
 | `/api/routing/dijkstra` | `POST` | Computes the shortest path using Dijkstra’s algorithm |
-| `/api/routing/hints` | `POST` | Returns optimization hints based on the graph (AI-style helper) |
-| `/api/scenarios` | `GET / POST` | Save and retrieve graph scenarios (in-memory for now) |
+| `/api/routing/bellman-ford` | `POST` | Computes shortest paths using Bellman-Ford |
+| `/api/graph/validate` | `POST` | Validates graph connectivity and edge weights |
+| `/api/scenarios` | `GET / POST` | Save and retrieve graph scenarios (in-memory) |
 | `/` | `GET` | Serves the main frontend UI |
 
 ---
@@ -38,8 +39,8 @@ Originally a front-end only project, this upgraded version integrates **Java, Sp
    - The frontend sends the network graph to the backend:
      ```json
      {
-       "start": 0,
-       "end": 4,
+       "startNode": 0,
+       "endNode": 4,
        "nodes": [...],
        "edges": [...]
      }
@@ -47,14 +48,14 @@ Originally a front-end only project, this upgraded version integrates **Java, Sp
    - The Spring Boot backend processes the request, runs the algorithm in Java, and returns:
      ```json
      {
-       "path": [0, 1, 4],
+       "shortestPath": [0, 1, 4],
        "totalCost": 7.5
      }
      ```
 
 3. **Visualize the Result**
    - The returned path is highlighted in the UI.
-   - The total cost is displayed below the canvas.
+   - The total cost is displayed visually on the canvas.
 
 ---
 
@@ -75,10 +76,14 @@ Spring_routing_algo/
 │       │   │   └── resources/
 │       │   │       ├── static/                  # Frontend served by Spring Boot
 │       │   │       │   ├── index.html
-│       │   │       │   ├── main.js
-│       │   │       │   ├── styles.css
-│       │   │       │   ├── about.html
+│       │   │       │   ├── routing.html
 │       │   │       │   ├── tutorial.html
+│       │   │       │   ├── styles.css
+│       │   │       │   ├── main.mod.js
+│       │   │       │   ├── js/
+│       │   │       │   │   ├── graphModel.js
+│       │   │       │   │   ├── renderer.js
+│       │   │       │   │   ├── api.js
 │       │   │       │   └── assets/
 │       │   │       └── application.properties
 │       │   └── test/
@@ -116,36 +121,36 @@ cd Spring_routing_algo/backend/routing-backend
 
 ### 3️⃣ Clean and Run the Spring Boot application
 
-
 ```powershell
-mvn clean package
-mvn spring-boot:run
+./mvnw.cmd clean package
+./mvnw.cmd spring-boot:run
 ```
 
 ### ⏳ Wait for the console message:
 
-```powershell
+```
 Started RoutingBackendApplication on port 8080
 ```
 
 ### 4️⃣ Open in your browser
 
 - Landing page: `http://localhost:8080/` (for `index.html`)
-
 - Visualizer: `http://localhost:8080/routing.html`
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- H2 console: `http://localhost:8080/h2-console`
 
 #### Optional - Run tests:
 
 ```powershell
-mvn test
+./mvnw.cmd test
 ```
-
-If the H2 DB file is locked on startup, stop other Java processes or start Spring Boot after killing java.exe processes. The H2 DB file lives in `backend/routing-backend/data/` by default.
 
 ## Debugging tips
 
-- If `/api-docs` or Swagger UI fails with a 500, check the server logs for stacktraces related to OpenAPI and ensure `OpenApiConfig` is valid.
-- If `/api/routing/dijkstra` returns 500, open browser DevTools → Network and inspect the request payload (Payload tab) and response body. Validation errors should now return 400 with a message.
-- To see server-side stacktraces, watch the terminal running `mvnw.cmd spring-boot:run` — unexpected errors are logged there.
+- If `/api/routing/dijkstra` or `/api/routing/bellman-ford` returns 400/500, check the browser DevTools → Network tab for request/response details. Validation errors return 400 with a message.
+- To see server-side stacktraces, watch the terminal running `./mvnw.cmd spring-boot:run` — unexpected errors are logged there.
+
+---
+
+## Notes
+
+- The frontend is now fully modular and contains only UI/UX and visualization logic. All algorithm computation is performed in the backend.
+- For a full enterprise separation, consider splitting frontend and backend into separate projects in the future.
