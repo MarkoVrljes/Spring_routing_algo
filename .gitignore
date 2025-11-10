@@ -1,0 +1,34 @@
+## Maven / Java
+/target/
+**/target/
+*.class
+*.log
+*.tmp
+*.bak
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Packages
+node_modules/
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+
+# H2 DB data directory
+backend/routing-backend/data/
+
+# Maven wrapper logs
+mvnwDebug.log

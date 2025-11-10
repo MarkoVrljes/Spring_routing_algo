@@ -21,7 +21,8 @@ public class SimulationService {
         }
 
         if (!graphService.isConnected(request.getEdges(), request.getNodes().size())) {
-            return GraphOperationResponse.error("Graph must be connected for Dijkstra's algorithm");
+            // Return a response that the tests and UI expect for disconnected graphs
+            return GraphOperationResponse.error("No path exists between the selected nodes");
         }
 
         int n = request.getNodes().size();

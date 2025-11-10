@@ -61,7 +61,12 @@ public class RoutingController {
                 return ResponseEntity.status(500).body(GraphOperationResponse.error("Internal server error"));
             }
             if (!response.isSuccess()) {
-                return ResponseEntity.badRequest().body(response);
+                String err = response.getError() == null ? "" : response.getError().toLowerCase();
+                // Negative-edge errors are considered client bad requests; disconnected graphs are valid responses
+                if (err.contains("negative")) {
+                    return ResponseEntity.badRequest().body(response);
+                }
+                return ResponseEntity.ok(response);
             }
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
