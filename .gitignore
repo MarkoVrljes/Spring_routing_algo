@@ -29,6 +29,9 @@ node_modules/
 
 # H2 DB data directory
 backend/routing-backend/data/
+data/
+*.mv.db
+*.trace.db
 
 # Maven wrapper logs
 mvnwDebug.log
